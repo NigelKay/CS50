@@ -1,0 +1,21 @@
+.container {
+    text-align: center;
+    padding-top: 16px;
+}
+
+@media (min-width: 1200px) {
+    .container {
+        max-width: 90%;
+    }
+}
+
+.gallery {
+    padding: 5px;
+    margin: auto;
+}
+
+@media (max-width: 1905px) {
+    img {
+        padding: 15px;
+    }
+}
