@@ -1,0 +1,24 @@
+.columnContent {
+    padding: 10px 50px;
+    margin: 0 20px;
+}
+
+#collectionForm {
+    background-color: #C8D382;
+    border-radius: 45px;
+}
+
+table {
+    border: 1px #DEE2E6 solid;
+    margin: 0 auto;
+}
+
+thead {
+    background-color: #C8D382;
+}
+
+.addBtn {
+    background-color: #6d5f4d;
+    color: white;
+    font-weight: bold;
+}
