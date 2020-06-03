@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Portfolio
+{% endblock %}
+
+{% block main %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th class="symbolHeader">Symbol</th>
+                <th>Name</th>
+                <th>Shares</th>
+                <th>Price</th>
+                <th>TOTAL</th>
+            </tr>
+        </thead>
+        <tfoot>
+            <tr>
+                <td colspan="4"></td>
+                <td>{{ totalWorth }}</td>
+            </tr>
+        </tfoot>
+        <tbody>
+
+                {% for stock in stocks %}
+                <tr>
+                    <td class="symbolHeader"> {{ stock["symbol"] }} </td>
+                    <td> {{ stock["name"] }} </td>
+                    <td> {{ stock["quantity"] }} </td>
+                    <td> {{ stock["price"] }} </td>
+                    <td> {{ stock["total"] }} </td>
+                </tr>
+                {% endfor %}
+
+            <tr>
+                <td class="symbolHeader" colspan="4">CASH</td>
+                <td>{{ cash }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <form action="/panicsell" method="post">
+        <button class="btn btn-danger" type="submit"> Panic Sell</button>
+    </form>
+{% endblock %}
