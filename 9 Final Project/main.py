@@ -3,9 +3,10 @@ import fileHelpers as files
 import dal as database
 
 # get list of members
-members = ["Agile_Nigle", "Greatcow"]
-
+# members = ["Agile_Nigle"]
+members = ["Agile_Nigle", "Greatcow", "VeraLynn", "momwuzhere", "Eramaen"]
 database.updateMembers(members)
+database.voidInactiveMembers()
 
 # database.writeSkills()
 
@@ -19,12 +20,15 @@ for member in members:
 currentAssignmentsData = database.checkCurrentAssignments(members)
 files.writeCurrentMonth(currentAssignmentsData)
 
-# Update PrevAss
+# Update PreviousAssignments
 database.updatePreviousAssignments(members)
 
+# Get new month optional
+newOp = 17
+f2pOp = 1
+
 # Pick new assignments
+database.createNewAssignments(members, newOp, f2pOp)
 
-
-
-# output prev assignment met status
-# output print string
+# Make file of pastable new assignments
+files.writeNewAssignments(members)

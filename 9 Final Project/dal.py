@@ -16,6 +16,10 @@ def updateMembers(members):
 			db.execute("UPDATE players SET current = 1 WHERE username = :username",  username = member)
 
 
+def voidInactiveMembers():
+	db.execute("DELETE FROM assignments WHERE player_id IN (SELECT id FROM players WHERE current == 0)")
+
+
 # def writeSkills():
 # 	skillsMapping = ["Attack", "Defence", "Strength", "Constitution", "Ranged", "Prayer", "Magic", "Cooking", "Woodcutting",
 # 					"Fletching", "Fishing", "Firemaking", "Crafting", "Smithing", "Mining", "Herblore", "Agility", "Thieving", "Slayer", 
@@ -26,7 +30,7 @@ def updateMembers(members):
 
 
 def updateXp(member, data):
-	memberId = db.execute("SELECT id FROM players WHERE username = :username",  username = member)[0]['id']
+	memberId = getMemberId(member)
 
 	for skill in data:
 
@@ -46,7 +50,7 @@ def checkCurrentAssignments(members):
 	assignmentStatusDict = {}
 
 	for member in members:
-		memberId = db.execute("SELECT id FROM players WHERE username = :username",  username = member)[0]['id']
+		memberId = getMemberId(member)
 		statusDict = {}
 
 		mainAssignment = getCurrentMainAssignment(memberId)
@@ -84,7 +88,7 @@ def checkTargetMet(memberId, assignment):
 def updatePreviousAssignments(members):
 
 	for member in members:
-		memberId = db.execute("SELECT id FROM players WHERE username = :username",  username = member)[0]['id']
+		memberId = getMemberId(member)
 
 		currentMain = getCurrentMainAssignment(memberId)
 		currentOptional = getCurrentOptionalAssignment(memberId)
@@ -107,8 +111,138 @@ def updatePreviousAssignments(members):
 						pid = memberId, pmain = currentMainSkill, pop = currentOptionalSkill)
 
 
+def createNewAssignments(members, newOptional, f2pOptional):
+	for member in members:
+		memberId = getMemberId(member)
+		isF2p = getF2pStatus(member)
+
+		if not isF2p:
+			newMain = chooseNewMain(memberId, newOptional)
+			newOpt = newOptional
+		else:
+			newMain = chooseNewF2pMain(memberId, f2pOptional)
+			newOpt = f2pOptional
+
+		updateMain(memberId, newMain)
+		updateOptional(memberId, newOpt)
+
+
+def updateMain(memberId, newMain):
+	currentStatInfo = db.execute("SELECT xp, level FROM xp WHERE player_id == :pid AND skill_id == :sid", pid = memberId, sid = newMain)
+
+	preExisting = len(db.execute("SELECT player_id FROM assignments WHERE player_id = :pid AND type == 'Main'", pid = memberId)) > 0
+	currentLevel = currentStatInfo[0]["level"]
+	currentXp = currentStatInfo[0]["xp"]
+
+	# TODO: Consider lvl 30 and below
+	if currentLevel < 65:
+		newTarget = "To level " + str(currentLevel + 1)
+	else:
+		newTarget = str(currentXp + 50000)
+
+	if preExisting:
+		db.execute("UPDATE assignments SET skill_id = :sid, target_xp = :xp WHERE player_id = :pid AND type == 'Main'", pid = memberId, sid = newMain, xp = newTarget)
+	else:
+		db.execute("INSERT INTO assignments (player_id, type, skill_id, target_xp) VALUES (:pid, 'Main', :sid, :xp)", pid = memberId, sid = newMain, xp = newTarget)
+
+
+def updateOptional(memberId, newOptional):
+	preExisting = len(db.execute("SELECT player_id FROM assignments WHERE player_id = :pid AND type == 'Optional'", pid = memberId)) > 0
+	currentXp = db.execute("SELECT xp FROM xp WHERE player_id == :pid AND skill_id == :sid", pid = memberId, sid = newOptional)[0]['xp']
+	newTarget = str(currentXp + 50000)
+
+	if preExisting:
+		db.execute("UPDATE assignments SET skill_id = :sid, target_xp = :xp WHERE player_id = :pid AND type == 'Optional'", pid = memberId, sid = newOptional, xp = newTarget)
+	else:
+		db.execute("INSERT INTO assignments (player_id, type, skill_id, target_xp) VALUES (:pid, 'Optional', :sid, :xp)", pid = memberId, sid = newOptional, xp = newTarget)
+
+
+def chooseNewMain(memberId, newOp):
+	disabled = [newOp, 27]
+	onetwentys = [16, 19, 20, 25, 28]
+
+	existingMain = getCurrentMainAssignment(memberId)
+	existingOptional = getCurrentOptionalAssignment(memberId)
+
+	if len(existingMain) > 0:
+		disabled.append(existingMain[0]['skill_id'])
+	if len(existingOptional) > 0:
+		disabled.append(existingOptional[0]['skill_id'])
+
+	lowestSkillUnder99 = lowestUnder99(memberId, disabled)
+	if lowestSkillUnder99 != None:
+		return lowestSkillUnder99
+	
+	lowestSkillUnder120 = lowestUnder120(memberId, disabled, onetwentys)
+	if lowestSkillUnder120 != None:
+		return lowestSkillUnder120
+
+	return lowestSkill(memberId, disabled)
+
+
+def chooseNewF2pMain(memberId, f2pOptional):
+	disabled = [f2pOptional, 16, 17, 18, 19, 20, 22, 23, 24, 26, 27, 28]
+
+	existingMain = getCurrentMainAssignment(memberId)
+	existingOptional = getCurrentOptionalAssignment(memberId)
+
+	if len(existingMain) > 0:
+		disabled.append(existingMain[0]['skill_id'])
+	if len(existingOptional) > 0:
+		disabled.append(existingOptional[0]['skill_id'])
+
+	return lowestSkill(memberId, disabled)
+
+
+def getMemberId(member):
+	return db.execute("SELECT id FROM players WHERE username = :username",  username = member)[0]['id']
+
+
+def getF2pStatus(member):
+	return db.execute("SELECT p2p FROM players WHERE username = :username",  username = member)[0]['p2p'] == 0
+
+
 def getCurrentMainAssignment(memberId):
 	return db.execute("SELECT skill_id, target_xp FROM assignments WHERE player_id == :pid AND type == 'Main'", pid = memberId)
 
+
 def getCurrentOptionalAssignment(memberId):
 	return db.execute("SELECT skill_id, target_xp FROM assignments WHERE player_id == :pid AND type == 'Optional'", pid = memberId)
+
+
+def lowestUnder99(memberId, disabled):
+	skillsUnder99 = db.execute("SELECT skill_id FROM xp WHERE player_id == :pid AND level < 99 ORDER BY xp ASC", pid = memberId)
+	
+	ids = [skills['skill_id'] for skills in skillsUnder99]
+	validIds = [id for id in ids if id not in disabled]
+	
+	if len(validIds) > 0:
+		return validIds[0]
+	else:
+		return None
+
+
+def lowestUnder120(memberId, disabled, onetwentys):
+	skillsUnder120 = db.execute("SELECT skill_id FROM xp WHERE player_id == :pid AND level < 120 ORDER BY xp ASC", pid = memberId)
+
+	ids = [skills['skill_id'] for skills in skillsUnder120]
+	onetwentyIds = [id for id in ids if id in onetwentys]
+	validIds = [id for id in onetwentyIds if id not in disabled]
+
+	if len(validIds) > 0:
+		return validIds[0]
+	else:
+		return None
+
+
+def lowestSkill(memberId, disabled):
+	rankedSkills = db.execute("SELECT skill_id FROM xp WHERE player_id == :pid ORDER BY xp ASC", pid = memberId)
+
+	ids = [skills['skill_id'] for skills in rankedSkills]
+	validIds = [id for id in ids if id not in disabled]
+
+	return validIds[0]
+
+
+def getSkillNameById(id):
+	return db.execute("SELECT skill_name FROM skills WHERE id == :id", id = id)
