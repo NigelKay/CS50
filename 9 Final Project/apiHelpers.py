@@ -6,12 +6,15 @@ skillsMapping = ["Attack", "Defence", "Strength", "Constitution", "Ranged", "Pra
 
 
 def getData(name):
+	# Request the members data from the runescape API
 	request = requests.get("https://secure.runescape.com/m=hiscore/index_lite.ws?player=" + name)
 	requestData = request.content.decode("utf-8").split('\n')
+	# cut out total and minigames
 	trimmedRequestData = requestData[1:29]
 
 	playerStatsDictionary = {}
 
+	# return as nested dict of skill: info
 	for i in range(28):
 		skillName = skillsMapping[i]
 

@@ -19,6 +19,7 @@ def writeNewAssignments(members):
 			writer.writerow([ok])
 
 
+# Generate the Enjinn specific code to be pasted in
 def generatePasteCode(member):
 	username = member.replace("_", " ")
 	memberId = database.getMemberId(member)
@@ -32,7 +33,6 @@ def generatePasteCode(member):
 	optionalSkillName = database.getSkillNameById(OptionalSkillInfo[0]['skill_id'])[0]['skill_name']
 	optionalSkillTarget = formatNumber(OptionalSkillInfo[0]['target_xp'])
 
-
 	partA = "[url=https://apps.runescape.com/runemetrics/app/levels/player/" + username + "][img]http://services.runescape.com/m=avatar-rs/" + username 
 	partB = "/chat.png[/img]" + username + "[/url]:[list][*][b]Main: [/b]" + mainSkillName + " " + mainSkillTarget
 	partC = "[*][b]Secondary: [/b]" + optionalSkillName + " " + optionalSkillTarget + "[/list]"
@@ -40,17 +40,7 @@ def generatePasteCode(member):
 	return partA + partB + partC
 
 
-
-
-
-
-
-# 		[url=https://apps.runescape.com/runemetrics/app/levels/player/Sariou][img]http://services.runescape.com/m=avatar-rs/Sariou/chat.png[/img]Sariou[/url]:
-# [list][*][b]Main: [/b]Strength No Data
-# [*][b]Secondary: [/b]Slayer No Data [/list]
-
-
-
+# Custom comma seperated numbers IF needed
 def formatNumber(input):
 	if input.split()[0] == 'To':
 		return input
